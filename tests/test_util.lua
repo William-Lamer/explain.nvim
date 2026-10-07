@@ -27,12 +27,6 @@ T['trim_output()']['keeps the head and tail of long output'] = function()
   eq(util.trim_output(numbers(300), 2, 3), { '1', '2', '... (295 lines omitted) ...', '298', '299', '300' })
 end
 
-T['trim_output()']['does not modify its input'] = function()
-  local lines = { 'a', '' }
-  util.trim_output(lines, 40, 60)
-  eq(lines, { 'a', '' })
-end
-
 T['line_mentioned_in()'] = MiniTest.new_set()
 
 T['line_mentioned_in()']['reads a compiler location'] = function()

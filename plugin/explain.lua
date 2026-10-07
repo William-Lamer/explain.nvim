@@ -3,33 +3,23 @@ if vim.g.loaded_explain then
 end
 vim.g.loaded_explain = true
 
+-- Subcommand to the function in require('explain') that it calls
 local subcommands = {
-  error = function(mode, target)
-    require('explain').explain_error(mode, target)
-  end,
-  code = function(mode, target)
-    require('explain').explain_code(mode, target)
-  end,
-  ['function'] = function(mode)
-    require('explain').explain_function(mode)
-  end,
-  chat = function(mode)
-    require('explain').toggle_chat(mode)
-  end,
-  last = function()
-    require('explain').reopen_last()
-  end,
+  error = 'explain_error',
+  code = 'explain_code',
+  ['function'] = 'explain_function',
+  chat = 'toggle_chat',
+  last = 'reopen_last',
 }
 
 vim.api.nvim_create_user_command('Explain', function(opts)
   local name, mode = opts.fargs[1] or 'error', opts.fargs[2]
-  local run = subcommands[name]
-  if not run then
+  if not subcommands[name] then
     vim.notify('explain.nvim: unknown subcommand ' .. name, vim.log.levels.ERROR)
     return
   end
   local target = opts.range > 0 and { first = opts.line1, last = opts.line2 } or nil
-  run(mode, target)
+  require('explain')[subcommands[name]](mode, target)
 end, {
   nargs = '*',
   range = true,

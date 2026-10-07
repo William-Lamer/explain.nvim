@@ -7,7 +7,7 @@ local util = require 'explain.util'
 
 local M = {}
 
-function M.file_section(buf, mode, first, last)
+local function file_section(buf, mode, first, last)
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
   local limits = mode.lite and config.options.lite or config.options.deep
   local from, to = util.file_window(#lines, first, last, limits.max_file_lines, limits.window)
@@ -22,7 +22,7 @@ function M.file_section(buf, mode, first, last)
   return string.format('File %s (%s, may include unsaved changes):\n```%s\n%s\n```', display, scope, ft, table.concat(numbered, '\n'))
 end
 
-function M.format_diagnostics(diags)
+local function format_diagnostics(diags)
   local out = {}
   for _, d in ipairs(diags) do
     local source = d.source and (d.source .. ': ') or ''
@@ -31,17 +31,18 @@ function M.format_diagnostics(diags)
   return table.concat(out, '\n')
 end
 
--- The source file that some output belongs to, centered on the line the output mentions
-local function output_source_section(output, source, mode)
+-- The output, then the source file it belongs to, centered on the line the output mentions
+local function output_prompt(header, output, source, mode)
+  local prompt = string.format('%s\n```\n%s\n```', header, output)
   if not util.is_file_buffer(source) then
-    return ''
+    return prompt
   end
   local line = util.line_mentioned_in(output, vim.api.nvim_buf_get_name(source))
-  return '\n\n' .. M.file_section(source, mode, line, line)
+  return prompt .. '\n\n' .. file_section(source, mode, line, line)
 end
 
-local function output_prompt(header, output, source, mode)
-  return string.format('%s\n```\n%s\n```%s', header, output, output_source_section(output, source, mode))
+local function terminal_prompt(buf, output, mode)
+  return output_prompt('Explain the errors in this output from `' .. util.terminal_command(buf) .. '`:', output, vim.b[buf].explain_source, mode)
 end
 
 -- Errors in a range of lines, or in a selected part of a terminal's output
@@ -50,13 +51,13 @@ local function range_context(buf, mode, target)
   if vim.bo[buf].buftype == 'terminal' then
     return {
       title = 'selected output',
-      prompt = output_prompt('Explain the errors in this output from `' .. util.terminal_command(buf) .. '`:', selected, vim.b[buf].explain_source, mode),
+      prompt = terminal_prompt(buf, selected, mode),
     }
   end
   local diags = vim.tbl_filter(function(d)
     return d.lnum + 1 >= target.first and d.lnum + 1 <= target.last
   end, vim.diagnostic.get(buf))
-  local diag_text = #diags > 0 and ('Diagnostics in these lines:\n' .. M.format_diagnostics(diags) .. '\n\n') or ''
+  local diag_text = #diags > 0 and ('Diagnostics in these lines:\n' .. format_diagnostics(diags) .. '\n\n') or ''
   return {
     title = string.format('bugs in lines %d-%d', target.first, target.last),
     focus = { buf = buf, first = target.first, last = target.last },
@@ -65,7 +66,7 @@ local function range_context(buf, mode, target)
       target.first,
       target.last,
       diag_text,
-      M.file_section(buf, mode, target.first, target.last)
+      file_section(buf, mode, target.first, target.last)
     ),
   }
 end
@@ -82,12 +83,7 @@ function M.error(mode, target)
   if vim.bo[buf].buftype == 'terminal' then
     return {
       title = 'terminal output',
-      prompt = output_prompt(
-        'Explain the errors in this output from `' .. util.terminal_command(buf) .. '`:',
-        util.terminal_output(buf),
-        vim.b[buf].explain_source,
-        mode
-      ),
+      prompt = terminal_prompt(buf, util.terminal_output(buf), mode),
     }
   end
 
@@ -97,7 +93,7 @@ function M.error(mode, target)
     return {
       title = 'error on line ' .. line,
       focus = { buf = buf, first = line, last = line },
-      prompt = 'Explain these diagnostics on line ' .. line .. ':\n' .. M.format_diagnostics(line_diags) .. '\n\n' .. M.file_section(buf, mode, line, line),
+      prompt = 'Explain these diagnostics on line ' .. line .. ':\n' .. format_diagnostics(line_diags) .. '\n\n' .. file_section(buf, mode, line, line),
     }
   end
 
@@ -114,7 +110,7 @@ function M.error(mode, target)
     local first = file_diags[1].lnum + 1
     return {
       title = 'file diagnostics',
-      prompt = 'Explain these diagnostics:\n' .. M.format_diagnostics(file_diags) .. '\n\n' .. M.file_section(buf, mode, first, first),
+      prompt = 'Explain these diagnostics:\n' .. format_diagnostics(file_diags) .. '\n\n' .. file_section(buf, mode, first, first),
     }
   end
 end
@@ -130,7 +126,7 @@ function M.code(mode, target)
     prompt = string.format(
       'Explain %s: what it does and how it works. Focus on that part; the rest of the file is context.\n\n%s',
       subject,
-      M.file_section(buf, mode, target.first, target.last)
+      file_section(buf, mode, target.first, target.last)
     ),
   }
 end

@@ -12,7 +12,6 @@ function M.has_claude()
   return false
 end
 
--- `claude` arguments for a mode's model and effort. effort is optional.
 function M.model_args(mode)
   local args = { '--model', mode.model }
   if mode.effort then

@@ -63,19 +63,8 @@ M.defaults = {
 
 M.options = vim.deepcopy(M.defaults)
 
--- vim.tbl_deep_extend merges lists by index, so a user list would be mixed with the default one
-local LIST_OPTIONS = { { 'root_markers' }, { 'deep', 'tools' } }
-
 function M.setup(opts)
-  opts = opts or {}
-  M.options = vim.tbl_deep_extend('force', vim.deepcopy(M.defaults), opts)
-  for _, path in ipairs(LIST_OPTIONS) do
-    local value = vim.tbl_get(opts, unpack(path))
-    if value then
-      local parent = #path == 1 and M.options or vim.tbl_get(M.options, unpack(path, 1, #path - 1))
-      parent[path[#path]] = value
-    end
-  end
+  M.options = vim.tbl_deep_extend('force', vim.deepcopy(M.defaults), opts or {})
 end
 
 -- Accepts a mode name, a mode table or nil for the default mode

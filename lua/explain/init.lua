@@ -1,6 +1,8 @@
 -- Public API. Every function takes an optional mode: a name from `modes` in the config, a mode
 -- table, or nil for `default_mode`.
 
+local chat = require 'explain.chat'
+local cli = require 'explain.cli'
 local config = require 'explain.config'
 local context = require 'explain.context'
 local popup = require 'explain.popup'
@@ -71,8 +73,8 @@ function M._operatorfunc(motion_type)
 end
 
 function M.toggle_chat(mode)
-  if require('explain.cli').has_claude() then
-    require('explain.chat').toggle(config.mode(mode))
+  if cli.has_claude() then
+    chat.toggle(config.mode(mode))
   end
 end
 

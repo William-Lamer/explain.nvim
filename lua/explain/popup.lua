@@ -2,6 +2,7 @@
 -- the buffer, so the window can be closed and reopened while the answer keeps streaming in.
 -- state is { mode, title, root, text, done, session_id, buf, proc }
 
+local chat = require 'explain.chat'
 local cli = require 'explain.cli'
 local config = require 'explain.config'
 local util = require 'explain.util'
@@ -64,7 +65,7 @@ local function show(state, on_close)
     end
     close()
     -- The chat loads the full Claude Code setup even when the popup used a lite mode
-    require('explain.chat').start(state.mode, state.root, { '--resume', state.session_id })
+    chat.start(state.mode, state.root, { '--resume', state.session_id })
   end, { buffer = buf, desc = 'Continue in chat' })
 end
 
@@ -75,7 +76,7 @@ function M.open(mode, ctx)
   end
   -- Only the last popup can be brought back, so an unfinished one that is not on screen would
   -- keep running and costing tokens for an answer nobody can see
-  if last and last.proc and not last.done and not (last.buf and vim.fn.bufwinid(last.buf) ~= -1) then
+  if last and last.proc and not last.done and vim.fn.bufwinid(last.buf) == -1 then
     last.proc:kill 'sigterm'
   end
   local state = { mode = mode, title = ctx.title, root = util.project_root(vim.api.nvim_get_current_buf()), text = '', done = false }
@@ -109,7 +110,7 @@ function M.reopen_last()
     vim.notify('explain.nvim: no popup to bring back yet', vim.log.levels.INFO)
     return
   end
-  local win = last.buf and vim.fn.bufwinid(last.buf) or -1
+  local win = vim.fn.bufwinid(last.buf)
   if win ~= -1 then
     vim.api.nvim_set_current_win(win)
   else

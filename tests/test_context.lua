@@ -89,30 +89,6 @@ T['error()']['ignores a failed run from another project'] = function()
   eq(context.error(quick), nil)
 end
 
-T['error()']['forgets a failed run after a successful one'] = function()
-  local buf = open_project_file('main.c', 3)
-  run_in_terminal 'exit 1'
-  eq(runs.last_failed(util.project_root(buf)) ~= nil, true)
-  run_in_terminal 'exit 0'
-  eq(context.error(quick), nil)
-end
-
-T['error()']['keeps a failed run after a success in another project'] = function()
-  local buf = open_project_file('main.c', 3)
-  run_in_terminal 'exit 1'
-  open_project_file('other.c', 3)
-  run_in_terminal 'exit 0'
-  eq(runs.last_failed(util.project_root(buf)) ~= nil, true)
-end
-
-T['error()']['ignores interrupted and killed runs'] = function()
-  local buf = open_project_file('main.c', 3)
-  run_in_terminal 'echo main.c:1: error: boom; exit 1'
-  run_in_terminal 'exit 130'
-  run_in_terminal('sleep 30', true)
-  eq(runs.last_failed(util.project_root(buf)).status, 1)
-end
-
 T['error()']['prefers the cursor line over a failed run'] = function()
   local buf = open_project_file('main.c', 3)
   run_in_terminal 'exit 1'
@@ -132,6 +108,32 @@ T['error()']['looks for bugs in a target range'] = function()
   eq(ctx.title, 'bugs in lines 3-5')
   contains(ctx.prompt, 'inside')
   eq(ctx.prompt:find('outside', 1, true), nil)
+end
+
+T['failed runs'] = MiniTest.new_set()
+
+T['failed runs']['are forgotten after a successful run'] = function()
+  local buf = open_project_file('main.c', 3)
+  run_in_terminal 'exit 1'
+  eq(runs.last_failed(util.project_root(buf)) ~= nil, true)
+  run_in_terminal 'exit 0'
+  eq(context.error(quick), nil)
+end
+
+T['failed runs']['are kept after a success in another project'] = function()
+  local buf = open_project_file('main.c', 3)
+  run_in_terminal 'exit 1'
+  open_project_file('other.c', 3)
+  run_in_terminal 'exit 0'
+  eq(runs.last_failed(util.project_root(buf)) ~= nil, true)
+end
+
+T['failed runs']['ignore interrupted and killed runs'] = function()
+  local buf = open_project_file('main.c', 3)
+  run_in_terminal 'echo main.c:1: error: boom; exit 1'
+  run_in_terminal 'exit 130'
+  run_in_terminal('sleep 30', true)
+  eq(runs.last_failed(util.project_root(buf)).status, 1)
 end
 
 T['code()'] = MiniTest.new_set()
