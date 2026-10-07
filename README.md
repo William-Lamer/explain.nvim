@@ -6,7 +6,9 @@ Explain errors and code in Neovim with one key, using [Claude Code](https://docs
 
 Put the cursor on a compiler error, a crash in a terminal split, or any piece of code, press a key, and an explanation streams into a popup: what is wrong, why, and how to fix it. When one answer is not enough, press `c` to continue the same conversation in a full Claude Code chat next to your code.
 
-![A compiler error explained in a popup, then continued in a Claude Code chat](demo/demo.gif)
+![A compiler error explained in a popup, then continued in a Claude Code chat](demo/error.gif)
+
+_The demos type `:Explain` so every step is visible. Day to day you would press a key instead, see [Usage](#usage)._
 
 ## Features
 
@@ -76,6 +78,10 @@ The same actions are available as a command, with completion:
 :Explain chat
 :Explain last
 ```
+
+Explaining a cryptic line selected with `V`:
+
+![A line of C selected and explained in a popup](demo/code.gif)
 
 ### Capturing errors from runs
 
@@ -155,7 +161,7 @@ explain.nvim focuses on fast, low cost explanations of both errors and code thro
 ```sh
 make test   # runs the tests with mini.test (cloned into deps/)
 make check  # stylua formatting check
-make demo   # records demo/demo.gif with vhs, making real Claude calls
+make demo   # records the GIFs in demo/ with vhs, making real Claude calls
 ```
 
 ## License

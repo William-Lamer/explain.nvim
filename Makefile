@@ -6,9 +6,10 @@ test: deps/mini.nvim
 deps/mini.nvim:
 	git clone --depth 1 https://github.com/nvim-mini/mini.nvim $@
 
-# Records demo/demo.gif with vhs, making real Claude calls
+# Records the GIFs in demo/ with vhs, making real Claude calls
 demo: deps/tokyonight.nvim
-	vhs demo/demo.tape
+	vhs demo/error.tape
+	vhs demo/code.tape
 
 deps/tokyonight.nvim:
 	git clone --depth 1 https://github.com/folke/tokyonight.nvim $@
