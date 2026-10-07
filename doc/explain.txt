@@ -1,0 +1,146 @@
+*explain.txt*        Explain errors and code with Claude Code
+
+==============================================================================
+CONTENTS                                                    *explain-contents*
+
+  1. Introduction ................................ |explain-introduction|
+  2. Requirements ................................ |explain-requirements|
+  3. Setup ....................................... |explain-setup|
+  4. Functions ................................... |explain-functions|
+  5. Command ..................................... |:Explain|
+  6. Modes ....................................... |explain-modes|
+  7. Failed runs ................................. |explain-runs|
+  8. Popup and chat .............................. |explain-popup|
+
+==============================================================================
+1. INTRODUCTION                                         *explain-introduction*
+
+explain.nvim sends an error or a piece of code to Claude Code and streams the
+explanation into a popup. A popup can be continued as a full Claude Code chat
+in a vertical split.
+
+==============================================================================
+2. REQUIREMENTS                                         *explain-requirements*
+
+- Neovim 0.11 or newer
+- Claude Code installed and logged in, with `claude` on your PATH
+- A treesitter parser for |explain.explain_function()|
+
+Run `:checkhealth explain` to verify them.
+
+==============================================================================
+3. SETUP                                                       *explain-setup*
+
+Calling setup() is optional. The plugin sets no keymaps. Example: >lua
+
+    require('explain').setup {}
+    vim.keymap.set({ 'n', 'x' }, '<leader>ce', function()
+      require('explain').explain_error()
+    end, { desc = 'Explain error' })
+    vim.keymap.set('n', '<leader>cx', function()
+      return require('explain').operator()
+    end, { expr = true, desc = 'Explain code {motion}' })
+<
+Options and their defaults: >lua
+
+    {
+      cmd = 'claude',
+      modes = {
+        quick = { model = 'sonnet', effort = 'medium', lite = true },
+        deep = { model = 'opus', effort = 'high', lite = false },
+      },
+      default_mode = 'quick',
+      lite = { system_prompt = '...', max_file_lines = 150, window = 50 },
+      deep = { append_system_prompt = '...', tools = { 'Read', 'Grep', 'Glob' } },
+      output = { head = 40, tail = 60 },
+      root_markers = { '.git', 'Makefile', ... },
+      popup = { width = 0.7, max_width = 100, height = 0.6,
+                border = 'rounded', highlight = 'Visual' },
+      chat = { width = 0.4, min_width = 70 },
+    }
+<
+`lite.max_file_lines` and `lite.window`: in a lite mode, files longer than
+`max_file_lines` send only `window` lines on each side of the target.
+
+`output.head` and `output.tail`: how many lines are kept from the start and
+the end of long terminal output.
+
+`root_markers`: Claude runs from the nearest directory containing one of
+these, falling back to the file's directory.
+
+==============================================================================
+4. FUNCTIONS                                               *explain-functions*
+
+Every function takes an optional {mode}: a name from `modes`, a mode table,
+or nil for `default_mode`.
+
+explain_error({mode}, {target})                    *explain.explain_error()*
+    Explains the most relevant error, checking in order: the terminal under
+    the cursor, diagnostics on the cursor line, the last failed run in this
+    project (|explain-runs|), then warnings anywhere in the file.
+    In visual mode, or with {target} `{ first, last }`, looks for bugs in
+    those lines instead.
+
+explain_code({mode}, {target})                      *explain.explain_code()*
+    Explains the visual selection, {target} `{ first, last, text }` or the
+    current line. With `text`, the question is about that exact expression.
+
+operator({mode})                                        *explain.operator()*
+    Returns `g@` for an |:map-expression|, so the mapping waits for a motion
+    or text object and explains the code it covers. A charwise motion within
+    one line, such as `iw`, explains just that text. Append `_` to the result
+    for a mapping that explains the current line.
+
+explain_function({mode})                        *explain.explain_function()*
+    Explains the function around the cursor, found with treesitter.
+
+toggle_chat({mode})                                  *explain.toggle_chat()*
+    Shows or hides the chat split, starting a session if none is running.
+
+reopen_last()                                        *explain.reopen_last()*
+    Shows the last popup again without a new request.
+
+==============================================================================
+5. COMMAND                                                          *:Explain*
+
+:[range]Explain [subcommand] [mode]
+    Subcommands: `error` (default), `code`, `function`, `chat`, `last`.
+    With a range, `error` looks for bugs in it and `code` explains it. >vim
+
+    :'<,'>Explain code deep
+<
+==============================================================================
+6. MODES                                                       *explain-modes*
+
+A mode is `{ model, effort, lite }`. `model` and `effort` are passed to the
+`claude` CLI as `--model` and `--effort`.
+
+With `lite = true`, Claude Code's system prompt, tools and settings are
+replaced by `lite.system_prompt`. A call then costs about 0.5k input tokens
+instead of about 13k, but Claude cannot read other files and does not see
+your CLAUDE.md.
+
+With `lite = false`, the default Claude Code prompt and CLAUDE.md are kept
+and the tools in `deep.tools` are allowed.
+
+==============================================================================
+7. FAILED RUNS                                                  *explain-runs*
+
+When a job in a |terminal| buffer exits with a non-zero status, its output is
+stored with the file the terminal was opened from. |explain.explain_error()|
+uses it from any file in the same project, until a later terminal job
+succeeds. Output from |:!| is not captured.
+
+==============================================================================
+8. POPUP AND CHAT                                              *explain-popup*
+
+In the popup:
+    `q`, `<Esc>`    Close. The answer keeps streaming in the background.
+    `c`             Continue the conversation in the chat split, with
+                    `claude --resume`. Waits for the answer to finish.
+
+The chat is a |terminal| running interactive Claude Code in the project root.
+It always loads the full Claude Code setup, even when the popup used a lite
+mode. Opening it is free; the cost starts with the first message.
+
+ vim:tw=78:ts=8:ft=help:norl:
