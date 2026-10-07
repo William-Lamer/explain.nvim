@@ -13,7 +13,7 @@ Put the cursor on a compiler error, a crash in a terminal split, or any piece of
 - **Explain errors** from LSP diagnostics, a terminal's output, or the last command that failed (`make`, `gcc`, a crash with an AddressSanitizer report), even after the terminal is closed.
 - **Explain code** with any motion or text object: a line, a word like `malloc`, a `{ }` block, a function, or a visual selection.
 - **Find bugs** in selected lines when there is no error message at all.
-- **Cheap by default.** The quick mode replaces Claude Code's system prompt, tools and settings with a three sentence prompt, so a call costs about 560 input tokens instead of about 13,000.
+- **Cheap by default.** The quick mode replaces Claude Code's system prompt, tools and settings with a three sentence prompt, so a call costs about 560 input tokens, against about 7,100 in the deep mode and about 29,000 with Claude Code's default setup.
 - **Continue in chat.** Every popup is a saved Claude Code session. Press `c` to resume it in a vertical split, where Claude can read your project and run your code.
 - **Bring back** the last popup without calling Claude again. Closing a popup does not cancel the answer.
 - No API key: it runs through the `claude` CLI and your existing Claude subscription.
@@ -101,6 +101,8 @@ require('explain').setup {
   deep = {
     append_system_prompt = '...',
     tools = { 'Read', 'Grep', 'Glob' },
+    max_file_lines = 500, -- like lite, with more room
+    window = 200,
   },
   output = { head = 40, tail = 60 }, -- lines kept from long terminal output
   root_markers = { '.git', 'Makefile', 'CMakeLists.txt', 'compile_commands.json', 'compile_flags.txt', 'Cargo.toml', 'package.json', 'pyproject.toml', 'go.mod' },
@@ -131,13 +133,15 @@ Measured with Claude Code 2.1 on small C files:
 | Deep mode (Opus), explain an error | ~7,100 | ~700 |
 | Claude Code's default setup, for comparison | ~29,000 | |
 
+The default setup depends on your own CLAUDE.md, skills and MCP servers, so yours may differ.
+
 Opening the chat split is free until you send a message. The first message loads the full Claude Code setup, so prefer the popup for quick questions.
 
 ## How it works
 
-`claude -p` runs asynchronously with `--output-format stream-json`, and the answer is assembled from its text deltas as they arrive. The prompt holds the error or the code range plus the current file with line numbers. A lite mode passes `--system-prompt`, `--tools ''` and `--setting-sources ''`, which skips Claude Code's default prompt, tool definitions, skills and settings. The session id from the stream is what `c` passes to `claude --resume` in the chat split.
+`claude -p` runs asynchronously with `--output-format stream-json`, and the answer is assembled from its text deltas as they arrive. The prompt holds the error or the code range plus the current file with line numbers, or a window around the target for long files. A lite mode passes `--system-prompt`, `--tools ''` and `--setting-sources ''`, which skips Claude Code's default prompt, tool definitions, skills and settings. The session id from the stream is what `c` passes to `claude --resume` in the chat split.
 
-Failed runs come from `TermOpen` and `TermClose` autocommands: the output of a terminal job that exits with an error is stored with the file the terminal was opened from and the project root, and only offered again in that project.
+Failed runs come from `TermOpen` and `TermClose` autocommands: the output of a terminal job that exits with an error is stored with the file the terminal was opened from and the project root, and only offered again in that project. A job interrupted with Ctrl-C or closed with `:bdelete!` does not count as a failure.
 
 ## Similar plugins
 

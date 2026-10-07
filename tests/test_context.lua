@@ -35,8 +35,9 @@ local function open_project_file(name, line_count)
   return vim.api.nvim_get_current_buf()
 end
 
--- Runs cmd in a terminal split opened from the current file, then returns to the file
-local function run_in_terminal(cmd)
+-- Runs cmd in a terminal split opened from the current file, then returns to the file.
+-- With kill, the terminal buffer is deleted while cmd is still running.
+local function run_in_terminal(cmd, kill)
   local source_win = vim.api.nvim_get_current_win()
   local closed = false
   vim.api.nvim_create_autocmd('TermClose', {
@@ -46,6 +47,9 @@ local function run_in_terminal(cmd)
     end,
   })
   vim.cmd('split | terminal ' .. cmd)
+  if kill then
+    vim.cmd 'bdelete!'
+  end
   vim.wait(5000, function()
     return closed
   end)
@@ -91,6 +95,22 @@ T['error()']['forgets a failed run after a successful one'] = function()
   eq(runs.last_failed(util.project_root(buf)) ~= nil, true)
   run_in_terminal 'exit 0'
   eq(context.error(quick), nil)
+end
+
+T['error()']['keeps a failed run after a success in another project'] = function()
+  local buf = open_project_file('main.c', 3)
+  run_in_terminal 'exit 1'
+  open_project_file('other.c', 3)
+  run_in_terminal 'exit 0'
+  eq(runs.last_failed(util.project_root(buf)) ~= nil, true)
+end
+
+T['error()']['ignores interrupted and killed runs'] = function()
+  local buf = open_project_file('main.c', 3)
+  run_in_terminal 'echo main.c:1: error: boom; exit 1'
+  run_in_terminal 'exit 130'
+  run_in_terminal('sleep 30', true)
+  eq(runs.last_failed(util.project_root(buf)).status, 1)
 end
 
 T['error()']['prefers the cursor line over a failed run'] = function()

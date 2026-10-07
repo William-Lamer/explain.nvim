@@ -12,21 +12,25 @@ function M.has_claude()
   return false
 end
 
+-- `claude` arguments for a mode's model and effort. effort is optional.
+function M.model_args(mode)
+  local args = { '--model', mode.model }
+  if mode.effort then
+    vim.list_extend(args, { '--effort', mode.effort })
+  end
+  return args
+end
+
 function M.build_command(mode)
-  local cmd = {
-    config.options.cmd,
-    '-p',
-    '--model',
-    mode.model,
-    '--effort',
-    mode.effort,
+  local cmd = vim.list_extend({ config.options.cmd, '-p' }, M.model_args(mode))
+  vim.list_extend(cmd, {
     '--strict-mcp-config',
     '--disable-slash-commands',
     '--output-format',
     'stream-json',
     '--include-partial-messages',
     '--verbose',
-  }
+  })
   if mode.lite then
     -- Empty values disable all tools and skip user/project settings (and with them CLAUDE.md)
     return vim.list_extend(cmd, { '--system-prompt', config.options.lite.system_prompt, '--tools', '', '--setting-sources', '' })
@@ -71,12 +75,13 @@ function M.apply_event(state, ev)
   end
 end
 
--- Streams the answer for prompt into state, calling on_update after every chunk and once more when done
+-- Streams the answer for prompt into state, calling on_update after every chunk and once more when
+-- done. Returns the vim.SystemObj, so the request can be killed.
 function M.run(state, prompt, on_update)
   local feed = M.new_parser(function(ev)
     M.apply_event(state, ev)
   end)
-  vim.system(M.build_command(state.mode), {
+  return vim.system(M.build_command(state.mode), {
     cwd = state.root,
     stdin = prompt,
     text = true,

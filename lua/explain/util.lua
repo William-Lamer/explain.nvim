@@ -44,14 +44,24 @@ function M.terminal_output(buf)
   return table.concat(lines, '\n')
 end
 
--- First line of `path` that compiler or sanitizer output points at, like "main.c:14:5: error"
--- or "#0 0x1000 in main main.c:14". The frontier keeps "xmain.c:3" from matching main.c.
+-- Line of `path` that compiler or sanitizer output points at, like "main.c:14:5: error" or
+-- "#0 0x1000 in main main.c:14", or a Python traceback frame like `File "main.py", line 14`.
+-- The frontier keeps "xmain.c:3" from matching main.c.
 function M.line_mentioned_in(output, path)
   local name = vim.fs.basename(path)
   if name == '' then
     return nil
   end
-  return tonumber(output:match('%f[%w_%.%-]' .. vim.pesc(name) .. ':(%d+)'))
+  local file = '%f[%w_%.%-]' .. vim.pesc(name)
+  local line = output:match(file .. ':(%d+)')
+  if line then
+    return tonumber(line)
+  end
+  -- Tracebacks list the most recent call last, so the last frame in this file is where it failed
+  for frame in output:gmatch(file .. '", line (%d+)') do
+    line = frame
+  end
+  return tonumber(line)
 end
 
 -- Which lines of a file to send: all of it when small, otherwise `window` lines around the target
@@ -86,8 +96,10 @@ end
 
 -- Node type names differ per language (function_definition in C and Python, function_item in Rust,
 -- method_definition in JavaScript), so this matches on the name instead of listing every grammar.
-local function is_function_node(type)
-  return (type:match 'function' or type:match 'method') and not (type:match 'call' or type:match 'declarator' or type:match 'parameter')
+-- Uses of a function are excluded, like function_call in Lua or method_invocation in Java.
+function M.is_function_node(type)
+  return (type:match 'function' or type:match 'method') ~= nil
+    and not (type:match 'call' or type:match 'invocation' or type:match 'reference' or type:match 'declarator' or type:match 'parameter')
 end
 
 -- Line range of the innermost function around the cursor, or nil
@@ -100,7 +112,7 @@ function M.enclosing_function()
   parser:parse()
   local node = vim.treesitter.get_node()
   while node do
-    if is_function_node(node:type()) then
+    if M.is_function_node(node:type()) then
       local first, _, last, end_col = node:range()
       -- Some grammars end the node at column 0 of the line after it
       if end_col == 0 and last > first then

@@ -5,8 +5,8 @@ M.defaults = {
   cmd = 'claude',
 
   -- Modes are selected by name when calling an explain function. A lite mode replaces Claude Code's
-  -- system prompt, tools and settings with a short prompt, which cuts a call from ~13k to ~0.5k
-  -- input tokens. It can't read other files, so a deep mode is there for harder questions.
+  -- system prompt, tools and settings with a short prompt, which cuts a call from ~7k input tokens
+  -- (deep mode) to ~0.5k. It can't read other files, so a deep mode is there for harder questions.
   modes = {
     quick = { model = 'sonnet', effort = 'medium', lite = true },
     deep = { model = 'opus', effort = 'high', lite = false },
@@ -23,8 +23,11 @@ M.defaults = {
   },
 
   deep = {
-    append_system_prompt = 'The answer is shown in a popup in the editor. Read other project files only if the answer depends on them.',
+    append_system_prompt = 'The answer is shown in a popup in the editor. Read other project files, or more of this one, only if the answer depends on them.',
     tools = { 'Read', 'Grep', 'Glob' },
+    -- Larger than in lite modes, and Claude can read the rest of the file if it needs to
+    max_file_lines = 500,
+    window = 200,
   },
 
   -- Long terminal output keeps both ends: compilers put the root cause first, crashes put it last

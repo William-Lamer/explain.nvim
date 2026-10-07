@@ -1,5 +1,6 @@
 -- An interactive Claude Code session in a vertical terminal split.
 
+local cli = require 'explain.cli'
 local config = require 'explain.config'
 local util = require 'explain.util'
 
@@ -31,7 +32,8 @@ function M.start(mode, root, extra_args)
   end
   chat.buf = vim.api.nvim_create_buf(false, true)
   show_window()
-  local cmd = vim.list_extend({ config.options.cmd, '--model', mode.model, '--effort', mode.effort }, extra_args or {})
+  local cmd = vim.list_extend({ config.options.cmd }, cli.model_args(mode))
+  vim.list_extend(cmd, extra_args or {})
   vim.fn.jobstart(cmd, { term = true, cwd = root })
   vim.b[chat.buf].explain_chat = true
 end

@@ -33,8 +33,8 @@ function M.check()
   end
 
   for name, mode in pairs(config.options.modes) do
-    if not (mode.model and mode.effort) then
-      vim.health.error(string.format("Mode '%s' needs both `model` and `effort`", name))
+    if not mode.model then
+      vim.health.error(string.format("Mode '%s' needs a `model`", name))
     end
   end
 end

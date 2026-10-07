@@ -11,7 +11,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        neovim: [stable, nightly]
+        # v0.11.0 is the oldest version the README supports
+        neovim: [v0.11.0, stable, nightly]
     steps:
       - uses: actions/checkout@v4
       - uses: rhysd/action-setup-vim@v1

@@ -9,10 +9,8 @@ local M = {}
 
 function M.file_section(buf, mode, first, last)
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-  local from, to = 1, #lines
-  if mode.lite then
-    from, to = util.file_window(#lines, first, last, config.options.lite.max_file_lines, config.options.lite.window)
-  end
+  local limits = mode.lite and config.options.lite or config.options.deep
+  local from, to = util.file_window(#lines, first, last, limits.max_file_lines, limits.window)
   local numbered = {}
   for i = from, to do
     table.insert(numbered, string.format('%4d  %s', i, lines[i]))

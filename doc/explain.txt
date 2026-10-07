@@ -51,7 +51,8 @@ Options and their defaults: >lua
       },
       default_mode = 'quick',
       lite = { system_prompt = '...', max_file_lines = 150, window = 50 },
-      deep = { append_system_prompt = '...', tools = { 'Read', 'Grep', 'Glob' } },
+      deep = { append_system_prompt = '...', tools = { 'Read', 'Grep', 'Glob' },
+               max_file_lines = 500, window = 200 },
       output = { head = 40, tail = 60 },
       root_markers = { '.git', 'Makefile', ... },
       popup = { width = 0.7, max_width = 100, height = 0.6,
@@ -61,6 +62,8 @@ Options and their defaults: >lua
 <
 `lite.max_file_lines` and `lite.window`: in a lite mode, files longer than
 `max_file_lines` send only `window` lines on each side of the target.
+`deep.max_file_lines` and `deep.window` do the same for other modes, which
+can read the rest of the file when they need it.
 
 `output.head` and `output.tail`: how many lines are kept from the start and
 the end of long terminal output.
@@ -113,12 +116,12 @@ reopen_last()                                        *explain.reopen_last()*
 6. MODES                                                       *explain-modes*
 
 A mode is `{ model, effort, lite }`. `model` and `effort` are passed to the
-`claude` CLI as `--model` and `--effort`.
+`claude` CLI as `--model` and `--effort`. `effort` is optional.
 
 With `lite = true`, Claude Code's system prompt, tools and settings are
 replaced by `lite.system_prompt`. A call then costs about 0.5k input tokens
-instead of about 13k, but Claude cannot read other files and does not see
-your CLAUDE.md.
+instead of about 7k in a deep mode, but Claude cannot read other files and
+does not see your CLAUDE.md.
 
 With `lite = false`, the default Claude Code prompt and CLAUDE.md are kept
 and the tools in `deep.tools` are allowed.
@@ -128,8 +131,9 @@ and the tools in `deep.tools` are allowed.
 
 When a job in a |terminal| buffer exits with a non-zero status, its output is
 stored with the file the terminal was opened from. |explain.explain_error()|
-uses it from any file in the same project, until a later terminal job
-succeeds. Output from |:!| is not captured.
+uses it from any file in the same project, until a later terminal job in that
+project succeeds. Jobs interrupted with CTRL-C (status 130) or killed by
+closing their buffer are ignored. Output from |:!| is not captured.
 
 ==============================================================================
 8. POPUP AND CHAT                                              *explain-popup*

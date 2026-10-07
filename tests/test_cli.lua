@@ -15,7 +15,7 @@ end
 
 T['build_command()'] = MiniTest.new_set()
 
--- These flags are what keep a lite call at ~0.5k input tokens instead of ~13k
+-- These flags are what keep a lite call at ~0.5k input tokens instead of ~7k in deep mode
 T['build_command()']['lite mode replaces the prompt and disables tools and settings'] = function()
   local cmd = cli.build_command(config.mode 'quick')
   eq(has_pair(cmd, '--system-prompt', config.options.lite.system_prompt), true)
@@ -29,6 +29,14 @@ T['build_command()']['deep mode keeps the default prompt and allows read-only to
   eq(has_pair(cmd, '--tools', 'Read,Grep,Glob'), true)
   eq(vim.tbl_contains(cmd, '--system-prompt'), false)
   eq(vim.tbl_contains(cmd, '--setting-sources'), false)
+end
+
+T['build_command()']['leaves out --effort when a mode has none'] = function()
+  local cmd = cli.build_command { model = 'haiku', lite = true }
+  eq(has_pair(cmd, '--model', 'haiku'), true)
+  eq(vim.tbl_contains(cmd, '--effort'), false)
+  -- A nil effort in the middle of the list would cut off everything after it
+  eq(has_pair(cmd, '--setting-sources', ''), true)
 end
 
 T['new_parser()'] = MiniTest.new_set()

@@ -1,6 +1,6 @@
 -- The floating window an answer streams into. Its content lives in a state table rather than in
 -- the buffer, so the window can be closed and reopened while the answer keeps streaming in.
--- state is { mode, title, root, text, done, session_id, buf }
+-- state is { mode, title, root, text, done, session_id, buf, proc }
 
 local cli = require 'explain.cli'
 local config = require 'explain.config'
@@ -13,7 +13,9 @@ local last = nil
 
 local function render(state)
   if state.buf and vim.api.nvim_buf_is_valid(state.buf) then
+    vim.bo[state.buf].modifiable = true
     vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, vim.split(state.text == '' and '_Thinking..._' or state.text, '\n'))
+    vim.bo[state.buf].modifiable = false
   end
 end
 
@@ -71,12 +73,18 @@ function M.open(mode, ctx)
   if not cli.has_claude() then
     return
   end
+  -- Only the last popup can be brought back, so an unfinished one that is not on screen would
+  -- keep running and costing tokens for an answer nobody can see
+  if last and last.proc and not last.done and not (last.buf and vim.fn.bufwinid(last.buf) ~= -1) then
+    last.proc:kill 'sigterm'
+  end
   local state = { mode = mode, title = ctx.title, root = util.project_root(vim.api.nvim_get_current_buf()), text = '', done = false }
   last = state
 
   local focus = ctx.focus
+  local mark
   if focus then
-    vim.api.nvim_buf_set_extmark(focus.buf, ns, focus.first - 1, 0, {
+    mark = vim.api.nvim_buf_set_extmark(focus.buf, ns, focus.first - 1, 0, {
       end_row = focus.last - 1,
       end_col = #vim.api.nvim_buf_get_lines(focus.buf, focus.last - 1, focus.last, false)[1],
       hl_group = config.options.popup.highlight,
@@ -84,12 +92,12 @@ function M.open(mode, ctx)
     })
   end
   show(state, function()
-    if focus and vim.api.nvim_buf_is_valid(focus.buf) then
-      vim.api.nvim_buf_clear_namespace(focus.buf, ns, 0, -1)
+    if mark and vim.api.nvim_buf_is_valid(focus.buf) then
+      vim.api.nvim_buf_del_extmark(focus.buf, ns, mark)
     end
   end)
 
-  cli.run(state, ctx.prompt, function()
+  state.proc = cli.run(state, ctx.prompt, function()
     render(state)
   end)
 end

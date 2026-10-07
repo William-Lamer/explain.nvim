@@ -20,8 +20,16 @@ function M.on_term_close(ev)
     return
   end
   local status = vim.v.event.status
+  -- -1 is a job killed by Neovim (:bdelete! on a running terminal) and 130 is Ctrl-C or Esc in a
+  -- picker like fzf. Neither is an error worth explaining, so the previous failure is kept.
+  if status == -1 or status == 130 then
+    return
+  end
+  local root = util.project_root(ev.buf)
   if status == 0 then
-    last_failed = nil
+    if last_failed and last_failed.root == root then
+      last_failed = nil
+    end
     return
   end
   last_failed = {
@@ -29,7 +37,7 @@ function M.on_term_close(ev)
     status = status,
     output = util.terminal_output(ev.buf),
     source = vim.b[ev.buf].explain_source,
-    root = util.project_root(ev.buf),
+    root = root,
   }
 end
 

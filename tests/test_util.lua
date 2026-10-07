@@ -56,6 +56,18 @@ T['line_mentioned_in()']['handles pattern characters in file names'] = function(
   eq(util.line_mentioned_in('my-file+1.c:9:2: error', 'my-file+1.c'), 9)
 end
 
+T['line_mentioned_in()']['reads the last frame of a Python traceback'] = function()
+  local traceback = table.concat({
+    'Traceback (most recent call last):',
+    '  File "/home/me/proj/app.py", line 40, in <module>',
+    '    main()',
+    '  File "/home/me/proj/app.py", line 12, in main',
+    '    return 1 / 0',
+    'ZeroDivisionError: division by zero',
+  }, '\n')
+  eq(util.line_mentioned_in(traceback, 'app.py'), 12)
+end
+
 T['file_window()'] = MiniTest.new_set()
 
 T['file_window()']['sends small files whole'] = function()
@@ -115,6 +127,13 @@ T['enclosing_function()']['skips a function call inside a Lua function'] = funct
   buffer('lua', { 'local function greet()', "  print('hi')", 'end' })
   vim.api.nvim_win_set_cursor(0, { 2, 3 })
   eq(util.enclosing_function(), { first = 1, last = 3 })
+end
+
+-- Java's grammar isn't bundled with Neovim, so its node names are checked directly
+T['enclosing_function()']['does not treat a Java method call as a function'] = function()
+  eq(util.is_function_node 'method_declaration', true)
+  eq(util.is_function_node 'method_invocation', false)
+  eq(util.is_function_node 'method_reference', false)
 end
 
 T['enclosing_function()']['returns nil without a parser'] = function()
