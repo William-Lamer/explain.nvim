@@ -29,6 +29,7 @@ local function open_window(title)
   local height = math.floor(vim.o.lines * opts.height)
   local win = vim.api.nvim_open_win(buf, true, {
     relative = 'editor',
+    style = 'minimal',
     width = width,
     height = height,
     row = math.floor((vim.o.lines - height) / 2),
@@ -42,6 +43,8 @@ local function open_window(title)
   vim.wo[win].wrap = true
   vim.wo[win].linebreak = true
   vim.wo[win].conceallevel = 2
+  -- Markdown stays concealed on the cursor line too, since the popup is read-only
+  vim.wo[win].concealcursor = 'n'
   return buf
 end
 
