@@ -9,6 +9,7 @@ deps/mini.nvim:
 # Records the GIFs in demo/ with vhs, making real Claude calls
 demo: deps/tokyonight.nvim
 	vhs demo/error.tape
+	vhs demo/diagnostic.tape
 	vhs demo/code.tape
 
 deps/tokyonight.nvim:

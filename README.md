@@ -68,6 +68,10 @@ The plugin sets no keymaps on its own. These are suggestions.
 
 In the popup, `q` or `<Esc>` closes it and `c` continues the conversation in the chat split.
 
+Explaining an LSP error on the cursor line:
+
+![An LSP error on a line of C explained in a popup](demo/diagnostic.gif)
+
 The same actions are available as a command, with completion:
 
 ```vim
